@@ -49,6 +49,7 @@ import org.jboss.weld.environment.se.Weld;
 import org.jboss.weld.junit5.EnableWeld;
 import org.jboss.weld.junit5.WeldInitiator;
 import org.jboss.weld.junit5.WeldSetup;
+import org.jboss.weld.junit5.auto.AddPackages;
 import org.jboss.weld.junit5.auto.EnableAlternativeStereotypes;
 import org.jboss.weld.junit5.auto.EnableAlternatives;
 import org.junit.jupiter.api.AfterEach;
@@ -61,6 +62,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.platform.commons.support.AnnotationSupport;
 
+import fr.paris.lutece.TestPackageMarker;
 import jakarta.annotation.Resource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.literal.InjectLiteral;
@@ -151,6 +153,7 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
      * <li>@Alternative beans
      * <li>injected @Resource
      * <li>@EnableAlternatives and @EnableAlternativeStereotypes on the test class
+     * <li>@AddPackages (if the current package is not enough)
      * </ul>
      * 
      * @param weld the Weld instance
@@ -158,9 +161,13 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
      */
     protected Weld configure(Weld weld)
     {
-        // the following line must be kept event if it seems to accomplish nothing
-        // without it, the synthetic bean archive is not built by WELD, and @Alternative annotations will not work as expected
-        weld.addPackages(getClass());
+        // without this line, the synthetic bean archive is not built by WELD, and @Alternative annotations will not work as expected
+        weld.addPackages(isDefaultPackageAddedRecursively(), getClass());
+        // the following line works as expected with Eclipse (recursively add all beans), but not with maven on the command line ...
+        // weld.addPackages(isDefaultPackageAddedRecursively(), TestPackageMarker.class);
+        if (shouldRecursivelyAddAllBeans())
+            // hard-coding "fr.paris.lutece" below would not work reliably: the package must be loaded by the classloader.
+            weld.addPackages(true, getClass().getClassLoader().getDefinedPackage(TestPackageMarker.class.getPackageName()));
         // In Java SE, force the whole classpath to be a single "bean archive"
         // Isolation must be disabled in order to support several possible @Alternative annotations for a given bean.
         weld.disableIsolation();
@@ -170,6 +177,9 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
 
         AnnotationSupport.findRepeatableAnnotations(getClass(), EnableAlternativeStereotypes.class).stream().flatMap(ann -> stream(ann.value())).distinct()
                 .forEach(weld::addAlternativeStereotype);
+        // in some cases, we want alternate beans that are defined in some other package
+        AnnotationSupport.findRepeatableAnnotations(getClass(), AddPackages.class)
+                .forEach(ann -> stream(ann.value()).distinct().forEach(cls -> weld.addPackage(ann.recursively(), cls)));
 
         // work around for @Resource not working in java SE
         weld.addContainerLifecycleObserver(ContainerLifecycleObserver.processAnnotatedType().notify(pat -> pat.configureAnnotatedType()
@@ -178,6 +188,30 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
                 // ... by @Inject (which works out of the box)
                 .forEach(m -> m.add(InjectLiteral.INSTANCE))));
         return weld;
+    }
+
+    /**
+     * Whether the default package (current test) is added recursively or not.
+     * 
+     * By default : true, which means more compatible, but potentially slower
+     * 
+     * @return true by default
+     */
+    protected boolean isDefaultPackageAddedRecursively()
+    {
+        return true;
+    }
+
+    /**
+     * Whether all test beans are added recursively or not, from "root" (fr.paris.lutece).
+     * 
+     * By default : true, which means more compatible, but potentially slower
+     * 
+     * @return true by default
+     */
+    protected boolean shouldRecursivelyAddAllBeans()
+    {
+        return true;
     }
 
     /**
@@ -307,7 +341,8 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
         junit3CurrentTest++;
     }
 
-    // compatibility for older syntax
+    // assertXXX methods : compatibility for older syntax
+    // should be removed if possible
     protected static void assertFalse(String comment, boolean condition)
     {
         assertFalse(condition, comment);
