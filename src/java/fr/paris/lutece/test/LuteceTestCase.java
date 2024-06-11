@@ -36,8 +36,15 @@ package fr.paris.lutece.test;
 import static java.util.Arrays.stream;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -46,6 +53,7 @@ import java.util.stream.Stream;
 
 import org.jboss.weld.environment.se.ContainerLifecycleObserver;
 import org.jboss.weld.environment.se.Weld;
+import org.jboss.weld.environment.util.Reflections;
 import org.jboss.weld.junit5.EnableWeld;
 import org.jboss.weld.junit5.WeldInitiator;
 import org.jboss.weld.junit5.WeldSetup;
@@ -78,6 +86,7 @@ import jakarta.enterprise.inject.literal.InjectLiteral;
 //   this should be removed if possible
 public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
 {
+    private static final String CLASS_FILE_EXTENSION = org.jboss.weld.environment.util.Files.CLASS_FILE_EXTENSION;
     // method names
     private static final String TEAR_DOWN = "tearDown";
     private static final String SET_UP = "setUp";
@@ -161,8 +170,7 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
      */
     protected Weld configure(Weld weld)
     {
-        // without this line, the synthetic bean archive is not built by WELD, and @Alternative annotations will not work as expected
-        weld.addPackages(isDefaultPackageAddedRecursively(), getClass());
+        addPackageFromClass(weld, getClass());
         // the following line works as expected with Eclipse (recursively add all beans), but not with maven on the command line ...
         // weld.addPackages(isDefaultPackageAddedRecursively(), TestPackageMarker.class);
         if (shouldRecursivelyAddAllBeans())
@@ -191,6 +199,88 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
     }
 
     /**
+     * Adds all beans from
+     * <ul>
+     * <li>the current package (THIS test class)
+     * <li>if autoFindPluginRelatedBeans returns true, also load beans from the src tree (needs to be done explicitly for plugin code)
+     * </ul>
+     * 
+     * @param weld
+     * @param klass
+     */
+    protected void addPackageFromClass(Weld weld, Class<?> klass)
+    {
+        // without this line, the synthetic bean archive is not built by WELD, and @Alternative annotations will not work as expected
+        weld.addPackages(isDefaultPackageAddedRecursively(), klass);
+        // now that we've added the given class, we do some special logic to add classes from the same package in the src tree
+        // for example, if the test class is plugin-myplugin/src/test/java/fr/paris/lutece/plugins/myplugin/SomeBusinessTest.java
+        // but we have also plugin-myplugin/src/java/fr/paris/lutece/plugins/myplugin/SomeBusinessBean.java
+        // we want to find all classes in root package from plugin-myplugin/target/classes/
+        if (!autoFindPluginRelatedBeans())
+            return;
+        try
+        {
+            URL url = klass.getClassLoader().getResource(klass.getName().replace('.', '/') + CLASS_FILE_EXTENSION);
+            if (url.getProtocol().equals("file"))
+            {
+                String classes = url.toString();
+                int pos = classes.indexOf("/target/test-classes/");// where maven compiles test classes ($THIS class is here)
+                if (pos != -1)
+                {
+                    classes = classes.substring(0, pos) + "/target/classes/";// where maven compiles actual (non-test) source code
+                    File sourceRoot = new File(new URI(classes));
+                    if (sourceRoot.exists() && sourceRoot.isDirectory())
+                    {
+                        Path root = sourceRoot.toPath();
+                        Class<?> foundClass = findSomeClass(root, sourceRoot, klass.getClassLoader());
+                        if (foundClass != null)
+                            weld.addPackages(isDefaultPackageAddedRecursively(), foundClass);
+                    }
+                }
+            }
+
+        } catch (Exception e)
+        {
+            TestLogService.info("addPackageFromClass : could not auto-scan beans", e);
+        }
+    }
+
+    /**
+     * finds topmost (shortest package name, counting path segments) class in source tree
+     * 
+     * @param root          root Path, to resolve relative paths
+     * @param currentFolder currently searched folder
+     * @param classLoader   used to load the class when found
+     * @return a class, or null if none was found
+     * @throws ClassNotFoundException
+     */
+    private Class<?> findSomeClass(Path root, File currentFolder, ClassLoader classLoader) throws ClassNotFoundException
+    {
+        File[] children = currentFolder.listFiles();
+        // first, classes
+        for (File child : children)
+            if (child.getName().endsWith(CLASS_FILE_EXTENSION))
+                return classLoader.loadClass(org.jboss.weld.environment.util.Files.filenameToClassname(root.relativize(child.toPath()).toString()));
+        // then sub dirs
+        for (File child : children)
+            if (child.isDirectory())
+            {
+                Class<?> clazz = findSomeClass(root, child, classLoader);
+                if (clazz != null)
+                    return clazz;
+            }
+        return null;
+    }
+
+    /**
+     * @return true to auto-scan for related beans in src tree
+     */
+    protected boolean autoFindPluginRelatedBeans()
+    {
+        return true;
+    }
+
+    /**
      * Whether the default package (current test) is added recursively or not.
      * 
      * By default : true, which means more compatible, but potentially slower
@@ -206,6 +296,8 @@ public abstract class LuteceTestCase extends org.junit.jupiter.api.Assertions
      * Whether all test beans are added recursively or not, from "root" (fr.paris.lutece).
      * 
      * By default : true, which means more compatible, but potentially slower
+     * 
+     * Note : works only for lutece-core. For plugins, see addPackageFromClass/autoFindPluginRelatedBeans
      * 
      * @return true by default
      */
