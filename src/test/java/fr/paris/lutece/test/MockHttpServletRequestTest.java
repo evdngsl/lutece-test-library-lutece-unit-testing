@@ -33,18 +33,20 @@
  */
 package fr.paris.lutece.test;
 
+import static org.junit.jupiter.api.Assertions.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import fr.paris.lutece.test.mocks.MockHttpServletRequest;
 
 /**
- * MokeHttpServletRequestTest
+ * MockHttpServletRequestTest
  */
-public class MokeHttpServletRequestTest
+public class MockHttpServletRequestTest
 {
     private static final String PARAM_NAME1 = "paramname1";
     private static final String PARAM_NAME2 = "paramname2";
@@ -59,63 +61,61 @@ public class MokeHttpServletRequestTest
     private static final String MISSING = "missingXXXXX";
 
     @Test
-    public void testMokeHttpRequestParams( )
+    public void testMokeHttpRequestParams()
     {
-        MokeHttpServletRequest request = new MokeHttpServletRequest( );
-        request.addMokeParameter( PARAM_NAME1, PARAM_VALUE1 );
-        request.addMokeParameter( PARAM_NAME1, PARAM_VALUE2 );
-        request.addMokeParameter( PARAM_NAME2, PARAM_VALUE3 );
-        assertEquals( new HashSet<String>( Arrays.asList( PARAM_NAME1, PARAM_NAME2 ) ),
-                new HashSet<String>( Collections.list( request.getParameterNames( ) ) ) );
-        assertEquals( new String [ ] {
-                PARAM_VALUE1, PARAM_VALUE2
-        }, request.getParameterValues( PARAM_NAME1 ) );
-        assertEquals( PARAM_VALUE1, request.getParameter( PARAM_NAME1 ) );
-        assertEquals( PARAM_VALUE3, request.getParameter( PARAM_NAME2 ) );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter(PARAM_NAME1, PARAM_VALUE1);
+        request.addParameter(PARAM_NAME1, PARAM_VALUE2);
+        request.addParameter(PARAM_NAME2, PARAM_VALUE3);
+        assertEquals(new HashSet<String>(Arrays.asList(PARAM_NAME1, PARAM_NAME2)), new HashSet<String>(Collections.list(request.getParameterNames())));
+        assertArrayEquals(new String[] { PARAM_VALUE1, PARAM_VALUE2 }, request.getParameterValues(PARAM_NAME1));
+        assertEquals(PARAM_VALUE1, request.getParameter(PARAM_NAME1));
+        assertEquals(PARAM_VALUE3, request.getParameter(PARAM_NAME2));
     }
+
     /**
      * Test of registerAdminUserWithRigth method, of class MokeHttpServletRequest.
      */
     @Test
-    public void testMokeHttpRequestHeaders( )
+    public void testMokeHttpRequestHeaders()
     {
-        System.out.println( "testMokeHttpRequestHeaders" );
-        MokeHttpServletRequest request = new MokeHttpServletRequest( );
-        request.addMokeHeader( HEADER_ACCEPT_LANGUAGE, LANGUAGE1 );
-        request.addMokeHeader( HEADER_ACCEPT_LANGUAGE, LANGUAGE2 );
-        request.addMokeHeader( HEADER_ACCEPT_ENCODING, ENCODING1 );
-        assertEquals( request.getHeader( HEADER_ACCEPT_LANGUAGE ), LANGUAGE1 );
-        List<String> listValues = Collections.list( request.getHeaders( HEADER_ACCEPT_LANGUAGE ) );
-        assertTrue( listValues.size( ) == 2 );
-        List<String> listHeaderNames = Collections.list( request.getHeaderNames( ) );
-        assertTrue( listHeaderNames.size( ) == 2 );
+        System.out.println("testMokeHttpRequestHeaders");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(HEADER_ACCEPT_LANGUAGE, LANGUAGE1);
+        request.addHeader(HEADER_ACCEPT_LANGUAGE, LANGUAGE2);
+        request.addHeader(HEADER_ACCEPT_ENCODING, ENCODING1);
+        assertEquals(request.getHeader(HEADER_ACCEPT_LANGUAGE), LANGUAGE1);
+        List<String> listValues = Collections.list(request.getHeaders(HEADER_ACCEPT_LANGUAGE));
+        assertTrue(listValues.size() == 2);
+        List<String> listHeaderNames = Collections.list(request.getHeaderNames());
+        assertTrue(listHeaderNames.size() == 2);
     }
 
     @Test
-    public void testMissingParameter( )
+    public void testMissingParameter()
     {
-        MokeHttpServletRequest request = new MokeHttpServletRequest( );
-        assertNull( request.getParameter( MISSING ) );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertNull(request.getParameter(MISSING));
     }
 
     @Test
-    public void testMissingParameters( )
+    public void testMissingParameters()
     {
-        MokeHttpServletRequest request = new MokeHttpServletRequest( );
-        assertNull( request.getParameterValues( MISSING ) );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertNull(request.getParameterValues(MISSING));
     }
 
     @Test
-    public void testMissingHeader( )
+    public void testMissingHeader()
     {
-        MokeHttpServletRequest request = new MokeHttpServletRequest( );
-        assertNull( request.getHeader( MISSING ) );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertNull(request.getHeader(MISSING));
     }
 
     @Test
-    public void testMissingHeaders( )
+    public void testMissingHeaders()
     {
-        MokeHttpServletRequest request = new MokeHttpServletRequest( );
-        assertFalse( request.getHeaders( MISSING ).hasMoreElements( ) );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        assertFalse(request.getHeaders(MISSING).hasMoreElements());
     }
 }

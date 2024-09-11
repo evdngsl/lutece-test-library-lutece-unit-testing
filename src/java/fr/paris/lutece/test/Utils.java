@@ -33,7 +33,7 @@
  */
 package fr.paris.lutece.test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -45,19 +45,12 @@ import java.io.Writer;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.xml.sax.SAXException;
 
-import fr.paris.lutece.portal.business.right.Right;
-import fr.paris.lutece.portal.business.user.AdminUser;
 import nu.validator.client.EmbeddedValidator;
 
 /**
@@ -67,39 +60,8 @@ public class Utils
 {
     private static Utils _singleton = new Utils( );
 
-    private static final String ATTRIBUTE_ADMIN_USER = "lutece_admin_user";
-
     private static final Random _rand = new SecureRandom( );
 
-    /**
-     * Register an admin user with a given right
-     * @param request the request to register the user into
-     * @param user The user
-     * @param strRight The right
-     */
-    public static void registerAdminUserWithRigth( HttpServletRequest request, AdminUser user, String strRight )
-    {
-        Map<String, Right> mapRights = new HashMap<String, Right>( );
-        Right right = new Right( );
-        right.setId( strRight );
-        mapRights.put( strRight, right );
-        user.setRights( mapRights );
-
-        // TODO set locale user
-        user.setLocale( new Locale( "fr", "FR", "" ) );
-        registerAdminUser( request, user );
-    }
-    
-    /**
-     * Register an admin user
-     * @param request the request to register the user into
-     * @param user The user
-     */
-    public static void registerAdminUser( HttpServletRequest request, AdminUser user )
-    {
-        request.getSession( true ).setAttribute( ATTRIBUTE_ADMIN_USER, user );
-    }
-    
     /**
      * Gets the content of a file as a string
      * 
