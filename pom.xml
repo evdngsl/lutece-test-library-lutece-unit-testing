@@ -17,7 +17,7 @@
         <repository>
             <id>luteceSnapshot</id>
             <name>luteceSnapshot</name>
-            <url>http://dev.lutece.paris.fr/snapshot_repository</url>
+            <url>https://dev.lutece.paris.fr/snapshot_repository</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -25,7 +25,7 @@
         <repository>
             <id>lutece</id>
             <name>luteceRepository</name>
-            <url>http://dev.lutece.paris.fr/maven_repository</url>
+            <url>https://dev.lutece.paris.fr/maven_repository</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
@@ -33,18 +33,35 @@
     </repositories>
 
     <dependencies>
+
+        <!-- JUnit -->
         <dependency>
-            <groupId>fr.paris.lutece</groupId>
-            <artifactId>lutece-core</artifactId>
-            <version>[8.0.0-SNAPSHOT,)</version>
-            <type>lutece-core</type>
-            <scope>provided</scope>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-junit5</artifactId>
+            <version>4.0.3.Final</version>
+        </dependency>
+        <!-- needed for compilation of some weld-using classes -->
+        <dependency>
+	      <groupId>jakarta.inject</groupId>
+	      <artifactId>jakarta.inject-api</artifactId>
+	    </dependency>
+	    <!-- we mock that -->
+    	<dependency>
+		    <groupId>jakarta.enterprise.concurrent</groupId>
+		    <artifactId>jakarta.enterprise.concurrent-api</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>jakarta.transaction</groupId>
+		    <artifactId>jakarta.transaction-api</artifactId>
+		</dependency>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config</artifactId>
+            <version>3.7.0</version>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-            <scope>compile</scope>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
@@ -52,22 +69,6 @@
             <version>4.0.1</version>
             <scope>compile</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <version>${springVersion}</version>
-        </dependency>
-        <!-- Needed by validation-api 1.1.0 (hibernate-validator 5.3.2)
-		<dependency>
-		    <groupId>jakarta.el</groupId>
-		    <artifactId>jakarta.el-api</artifactId>
-		    <version>5.0.1</version>
-		</dependency>
-        <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.el</artifactId>
-            <version>3.0.0</version>
-        </dependency> -->
         <dependency>
             <groupId>nu.validator</groupId>
             <artifactId>validator</artifactId>
@@ -78,7 +79,21 @@
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
                 </exclusion>
-            </exclusions>
+                <!-- if included, saxon replaces the internal apache xalan parser and fails with some XSL -->
+                <exclusion>
+                	<groupId>net.sf.saxon</groupId>
+                	<artifactId>Saxon-HE</artifactId>
+                </exclusion>
+             </exclusions>
+        </dependency>
+        <dependency>
+		    <groupId>fr.paris.lutece.plugins</groupId>
+		    <artifactId>library-lutece-unit-testing-common</artifactId>
+		    <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
         </dependency>
     </dependencies>
 
